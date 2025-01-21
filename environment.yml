@@ -1,0 +1,12 @@
+name: swiss_elections_study
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - conda-lock=2.5
+
+  # Base dependencies
+  - pandas=2.2
+  - numpy=2.2
+platforms:
+  - linux-64
