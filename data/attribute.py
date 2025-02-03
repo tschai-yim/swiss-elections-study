@@ -36,6 +36,11 @@ AGE_ATTR = Attribute(
 SEX_UNKNOWN = -1
 SEX_MALE = 0
 SEX_FEMALE = 1
+SEX_LABEL_MAPPER = {
+    SEX_UNKNOWN: 'Unknown',
+    SEX_MALE: 'Male',
+    SEX_FEMALE: 'Female'
+}
 SEX_ATTR = Attribute('sex', 'Sex', np.int8, 'Legal sex (-1 = Unknown, 0 = Male, 1 = Female)')
 
 # BFS Population
