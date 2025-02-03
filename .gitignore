@@ -11,3 +11,6 @@ __pycache__/
 
 # JetBrains IDE
 .idea/
+
+# Data cache
+data_cache/

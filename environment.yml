@@ -8,5 +8,9 @@ dependencies:
   # Base dependencies
   - pandas=2.2
   - numpy=2.2
+  - matplotlib=3.10
+  - pyarrow=19.0
+  - pip:
+    - pyaxis==0.4.*
 platforms:
   - linux-64
