@@ -1,11 +1,12 @@
 import functools
 from typing import cast
 
+import numpy as np
 import pandas as pd
 from pyaxis import pyaxis
 
-from data.attribute import CACHE_TO_ATTR_MAPPER, ATTR_TO_CACHE_MAPPER, YEAR_ATTR, POSTAL_CODE_ATTR, \
-    IS_PERMANENT_RESIDENT_ATTR, IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR
+from data.attribute import CACHE_TO_ATTR_MAPPER, ATTR_TO_CACHE_MAPPER, YEAR_ATTR, COMMUNE_ATTR, \
+    IS_PERMANENT_RESIDENT_ATTR, IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR, COMMUNE_SIZE_UNKNOWN
 from data.cache import POPULATION_CACHE
 
 
@@ -25,7 +26,7 @@ def _load_raw_bfs_population_cga():
     # Convert to correct types
     return pd.concat((
         YEAR_ATTR.convert(raw_df['Year']),
-        POSTAL_CODE_ATTR.convert(raw_df['Canton (-) / District (>>) / Commune (......)'].str.slice(6, 10)),
+        COMMUNE_ATTR.convert(raw_df['Canton (-) / District (>>) / Commune (......)'].str.slice(6, 10)),
         IS_PERMANENT_RESIDENT_ATTR.convert(
             cast(pd.Series, raw_df['Population type'] == 'Permanent resident population')
         ),
@@ -44,3 +45,31 @@ def get_bfs_population_cga() -> pd.DataFrame:
     df = _load_raw_bfs_population_cga()
     df.rename(ATTR_TO_CACHE_MAPPER, axis=1).to_feather(cache_file)
     return df
+
+
+def _population_to_commune_size(population: np.number) -> int:
+    if np.isnan(population):
+        return COMMUNE_SIZE_UNKNOWN
+    if population > 100000:
+        return 7
+    if population > 50000:
+        return 6
+    if population > 20000:
+        return 5
+    if population > 10000:
+        return 4
+    if population > 5000:
+        return 3
+    if population > 2000:
+        return 2
+    if population > 1000:
+        return 1
+    return 0
+
+
+@functools.cache
+def get_commune_to_size_map(year: int) -> pd.Series:
+    population = get_bfs_population_cga()
+    return population[population[YEAR_ATTR] == year] \
+        .groupby(COMMUNE_ATTR)[POPULATION_ATTR].sum() \
+        .map(_population_to_commune_size)

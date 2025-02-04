@@ -52,4 +52,4 @@ class Cache:
         return cache_dir
 
 
-POPULATION_CACHE = Cache('population')
+POPULATION_CACHE = Cache('population', version=datetime(2024, 2, 4))
