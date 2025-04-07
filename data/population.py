@@ -6,7 +6,8 @@ import pandas as pd
 from pyaxis import pyaxis
 
 from data.attribute import CACHE_TO_ATTR_MAPPER, ATTR_TO_CACHE_MAPPER, YEAR_ATTR, COMMUNE_ATTR, \
-    IS_PERMANENT_RESIDENT_ATTR, IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR, COMMUNE_SIZE_UNKNOWN
+    IS_PERMANENT_RESIDENT_ATTR, IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR, COMMUNE_SIZE_UNKNOWN, \
+    COMMUNE_SIZE_ATTR
 from data.cache import POPULATION_CACHE
 
 
@@ -37,16 +38,6 @@ def _load_raw_bfs_population_cga():
     ), axis=1)
 
 
-@functools.cache
-def get_bfs_population_cga() -> pd.DataFrame:
-    cache_file = POPULATION_CACHE.dir().joinpath('population_cga.feather')
-    if cache_file.exists():
-        return pd.read_feather(cache_file).rename(CACHE_TO_ATTR_MAPPER, axis=1)
-    df = _load_raw_bfs_population_cga()
-    df.rename(ATTR_TO_CACHE_MAPPER, axis=1).to_feather(cache_file)
-    return df
-
-
 def _population_to_commune_size(population: np.number) -> int:
     if np.isnan(population):
         return COMMUNE_SIZE_UNKNOWN
@@ -68,8 +59,14 @@ def _population_to_commune_size(population: np.number) -> int:
 
 
 @functools.cache
-def get_commune_to_size_map(year: int) -> pd.Series:
-    population = get_bfs_population_cga()
-    return population[population[YEAR_ATTR] == year] \
-        .groupby(COMMUNE_ATTR)[POPULATION_ATTR].sum() \
-        .map(_population_to_commune_size)
+def get_bfs_population_cga() -> pd.DataFrame:
+    cache_file = POPULATION_CACHE.dir().joinpath('population_cga.feather')
+    if cache_file.exists():
+        df = pd.read_feather(cache_file).rename(CACHE_TO_ATTR_MAPPER, axis=1)
+    else:
+        df = _load_raw_bfs_population_cga()
+        df.rename(ATTR_TO_CACHE_MAPPER, axis=1).to_feather(cache_file)
+    df[COMMUNE_SIZE_ATTR] = df.groupby([YEAR_ATTR, COMMUNE_ATTR])[POPULATION_ATTR] \
+        .transform(lambda x: _population_to_commune_size(x.sum()))
+    return df
+
