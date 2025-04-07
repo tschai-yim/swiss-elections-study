@@ -10,7 +10,8 @@ dependencies:
   - numpy=2.2
   - matplotlib=3.10
   - pyarrow=19.0
+  - scipy=1.15
   - pip:
-    - pyaxis==0.4.*
+      - pyaxis==0.4.*
 platforms:
   - linux-64
