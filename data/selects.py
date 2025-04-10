@@ -112,7 +112,7 @@ def apply_age_smoothing(
 def apply_demographic_correction(
         selects_df: pd.DataFrame,
         electorate_df: pd.DataFrame,
-        acceptable_amplification: float = 5.0,
+        acceptable_correction: float = 5.0,
         demographic_attributes: list = None,
         selects_weight: str = 'weightc',
 ) -> pd.DataFrame:
@@ -123,7 +123,7 @@ def apply_demographic_correction(
     Args:
         selects_df: The selects dataframe
         electorate_df: The electorate dataframe
-        acceptable_amplification: Maximum allowed over-weighting for correction
+        acceptable_correction: Maximum allowed over- or under-weighting for correction
         demographic_attributes: Variables to use for demographic correction
         selects_weight: The weight used to calculate the demographic distribution
 
@@ -150,7 +150,7 @@ def apply_demographic_correction(
 
     # Calculate correction multipliers
     correction_multiplier = (demographic_proportions['Electorate'] / demographic_proportions['Selects']) \
-        .clip(upper=acceptable_amplification)
+        .clip(upper=acceptable_correction, lower=1 / acceptable_correction)
 
     # Apply demographic correction to selects
     corrected_selects_df = selects_df.copy()
