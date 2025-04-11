@@ -6,7 +6,7 @@ import pandas as pd
 from pyaxis import pyaxis
 
 from data.attribute import CACHE_TO_ATTR_MAPPER, ATTR_TO_CACHE_MAPPER, YEAR_ATTR, COMMUNE_ATTR, \
-    IS_PERMANENT_RESIDENT_ATTR, IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR, COMMUNE_SIZE_UNKNOWN, \
+    IS_PERMANENT_RESIDENT_ATTR, IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR, \
     COMMUNE_SIZE_ATTR
 from data.cache import POPULATION_CACHE
 
@@ -32,30 +32,30 @@ def _load_raw_bfs_population_cga():
             cast(pd.Series, raw_df['Population type'] == 'Permanent resident population')
         ),
         IS_CITIZEN_ATTR.convert(cast(pd.Series, raw_df['Citizenship (category)'] == 'Switzerland')),
-        SEX_ATTR.convert(cast(pd.Series, raw_df['Sex'] == 'Female')),
+        SEX_ATTR.convert(cast(pd.Series, raw_df['Sex'])),
         AGE_ATTR.convert(raw_df['Age'].str.split(' ', n=1).str[0]),
         POPULATION_ATTR.convert(raw_df['DATA'])
     ), axis=1)
 
 
-def _population_to_commune_size(population: np.number) -> int:
+def _population_to_commune_size(population: np.number) -> str | None:
     if np.isnan(population):
-        return COMMUNE_SIZE_UNKNOWN
+        return None
     if population > 100000:
-        return 7
+        return '> 100\'000'
     if population > 50000:
-        return 6
+        return '50\'000-99\'999'
     if population > 20000:
-        return 5
+        return '20\'000-49\'999'
     if population > 10000:
-        return 4
+        return '10\'000-19\'999'
     if population > 5000:
-        return 3
+        return '5\'000-9\'999'
     if population > 2000:
-        return 2
+        return '2\'000-4\'999'
     if population > 1000:
-        return 1
-    return 0
+        return '1\'000-1\'999'
+    return '1-999'
 
 
 @functools.cache
@@ -69,4 +69,3 @@ def get_bfs_population_cga() -> pd.DataFrame:
     df[COMMUNE_SIZE_ATTR] = df.groupby([YEAR_ATTR, COMMUNE_ATTR])[POPULATION_ATTR] \
         .transform(lambda x: _population_to_commune_size(x.sum()))
     return df
-

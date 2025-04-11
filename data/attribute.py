@@ -18,6 +18,18 @@ class Attribute:
         return self.name
 
 
+@dataclass(frozen=True)
+class CategoricalAttribute(Attribute):
+    categories: tuple
+    ordered: bool = False
+
+    def convert(self, value: pd.Series) -> pd.Series:
+        return pd.Series(
+            pd.Categorical(value, categories=self.categories, ordered=self.ordered),
+            name=self
+        )
+
+
 YEAR_ATTR = Attribute('year', 'Year', np.uint16, 'Year the record is about')
 
 # Demographic attributes
@@ -36,30 +48,29 @@ AGE_ATTR = Attribute(
     'Age in whole years (-1 = Unknown, 100 = 100 years or older, sometimes approximate)'
 )
 
-SEX_UNKNOWN = -1
-SEX_MALE = 0
-SEX_FEMALE = 1
-SEX_LABEL_MAPPER = {
-    SEX_UNKNOWN: 'Unknown',
-    SEX_MALE: 'Male',
-    SEX_FEMALE: 'Female'
-}
-SEX_ATTR = Attribute('sex', 'Sex', np.int8, 'Legal sex (-1 = Unknown, 0 = Male, 1 = Female)')
+SEX_MALE = 'Male'
+SEX_FEMALE = 'Female'
+SEX_ATTR = CategoricalAttribute(
+    'sex', 'Sex', 'category', 'Legal sex',
+    categories=(SEX_MALE, SEX_FEMALE)
+)
 
 # From sg7b feature from fors_selects_1971_2019
-COMMUNE_SIZE_UNKNOWN = -1
-COMMUNE_SIZE_LABEL_MAPPER = {
-    COMMUNE_SIZE_UNKNOWN: 'Unknown',
-    0: '1-999',
-    1: '1\'000-1\'999',
-    2: '2\'000-4\'999',
-    3: '5\'000-9\'999',
-    4: '10\'000-19\'999',
-    5: '20\'000-49\'999',
-    6: '50\'000-99\'999',
-    7: '> 100\'000'
-}
-COMMUNE_SIZE_ATTR = Attribute('commune_size', 'Commune Size', np.int8, 'Size category of the commune')
+COMMUNE_SIZES = (
+    '1-999',
+    '1\'000-1\'999',
+    '2\'000-4\'999',
+    '5\'000-9\'999',
+    '10\'000-19\'999',
+    '20\'000-49\'999',
+    '50\'000-99\'999',
+    '> 100\'000'
+)
+COMMUNE_SIZE_ATTR = CategoricalAttribute(
+    'commune_size', 'Commune Size', 'category', 'Size category of the commune',
+    categories=COMMUNE_SIZES,
+    ordered=True
+)
 
 # BFS Population
 POPULATION_ATTR = Attribute('population', 'Population', np.uint32,

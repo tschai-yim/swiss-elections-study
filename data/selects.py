@@ -3,21 +3,21 @@ import functools
 import numpy as np
 import pandas as pd
 
-from data.attribute import YEAR_ATTR, SEX_ATTR, AGE_ATTR, SEX_UNKNOWN, SEX_MALE, SEX_FEMALE, COMMUNE_SIZE_ATTR, \
-    COMMUNE_SIZE_UNKNOWN, POPULATION_ATTR
+from data.attribute import YEAR_ATTR, SEX_ATTR, AGE_ATTR, SEX_MALE, SEX_FEMALE, COMMUNE_SIZE_ATTR, \
+    POPULATION_ATTR
 
 AGE_WEIGHT = 'weight_age'
 DEMOGRAPHIC_WEIGHT = 'weight_demographic'
 
 SG7B_TO_COMMUNE_SIZE_MAPPER = {
-    '-999': 0,
-    '1\'000-1\'999': 1,
-    '2\'000-4\'999': 2,
-    '5\'000-9\'999': 3,
-    '10\'000-19\'999': 4,
-    '20\'000-49\'999': 5,
-    '50\'000-99\'999': 6,
-    '> 100\'000 inhab.': 7,
+    '-999': '1-999',
+    '1\'000-1\'999': '1\'000-1\'999',
+    '2\'000-4\'999': '2\'000-4\'999',
+    '5\'000-9\'999': '5\'000-9\'999',
+    '10\'000-19\'999': '10\'000-19\'999',
+    '20\'000-49\'999': '20\'000-49\'999',
+    '50\'000-99\'999': '50\'000-99\'999',
+    '> 100\'000 inhab.': '> 100\'000',
 }
 
 _SELECTS_TO_ATTR_MAPPER = {
@@ -28,12 +28,11 @@ _SELECTS_TO_ATTR_MAPPER = {
 }
 _SELECTS_PROCESSORS = {
     'sex': lambda x: x.map({
-        'nan': SEX_UNKNOWN,
         'male': SEX_MALE,
         'female': SEX_FEMALE
-    }).astype(np.float16).fillna(SEX_UNKNOWN),
+    }),
     'age': lambda x: x.astype(np.float16).clip(-1, 100).fillna(-1),
-    'sg7b': lambda x: x.map(SG7B_TO_COMMUNE_SIZE_MAPPER).astype(np.float16).fillna(COMMUNE_SIZE_UNKNOWN)
+    'sg7b': lambda x: x.map(SG7B_TO_COMMUNE_SIZE_MAPPER)
 }
 
 
@@ -134,8 +133,10 @@ def apply_demographic_correction(
         demographic_attributes = [AGE_ATTR, SEX_ATTR, COMMUNE_SIZE_ATTR]
 
     # Calculate demographic distributions
-    selects_demographics = selects_df.groupby(demographic_attributes)[selects_weight].sum().rename('Selects')
-    electorate_demographics = electorate_df.groupby(demographic_attributes)[POPULATION_ATTR].sum().rename('Electorate')
+    selects_demographics = selects_df.groupby(demographic_attributes, observed=True)[selects_weight] \
+        .sum().rename('Selects')
+    electorate_demographics = electorate_df.groupby(demographic_attributes, observed=True)[POPULATION_ATTR] \
+        .sum().rename('Electorate')
 
     # Only use demographics present in both selects and electorate data
     demographic_proportions = pd.concat([
