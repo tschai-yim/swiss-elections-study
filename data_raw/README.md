@@ -10,3 +10,6 @@ Because of data licensing restrictions, you will have to request and download th
 - `bfs_national_council_election_participation_2019.csv` file: https://opendata.swiss/en/dataset/eidg-wahlen-2019/resource/98db1ea4-3143-4b29-890a-98ef68fcc749
 - `bfs_national_council_election_results_2019.csv` file: https://opendata.swiss/en/dataset/eidg-wahlen-2019/resource/033824b0-72d9-4595-8769-5b38dc7819de
 - `bfs_national_council_election_lists_2019.csv` file: https://opendata.swiss/en/dataset/eidg-wahlen-2019/resource/1d14366d-3bcd-496c-bdf9-46ee0d45110b
+- `bfs_historical_commune_registry` directory: https://www.agvchapp.bfs.admin.ch/file/txt
+  - Specification at https://www.ech.ch/de/ech/ech-0071/1.2.0
+  

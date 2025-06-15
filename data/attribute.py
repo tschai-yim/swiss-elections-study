@@ -3,6 +3,9 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+ATTR_TO_CACHE_MAPPER = {}
+CACHE_TO_ATTR_MAPPER = {}
+
 
 @dataclass(frozen=True)
 class Attribute:
@@ -10,6 +13,12 @@ class Attribute:
     name: str
     type: np.typing.DTypeLike
     description: str
+
+    def __post_init__(self):
+        if self.id in ATTR_TO_CACHE_MAPPER:
+            raise ValueError(f"Attribute ID '{self.id}' is already defined.")
+        ATTR_TO_CACHE_MAPPER[self] = self.id
+        CACHE_TO_ATTR_MAPPER[self.id] = self
 
     def convert(self, value: pd.Series) -> pd.Series:
         return value.astype(self.type).rename(self)
@@ -33,10 +42,6 @@ class CategoricalAttribute(Attribute):
 YEAR_ATTR = Attribute('year', 'Year', np.uint16, 'Year the record is about')
 
 # Demographic attributes
-COMMUNE_ATTR = Attribute(
-    'commune', 'Commune', np.uint16,
-    'BFS commune code (https://www.bfs.admin.ch/bfs/de/home/grundlagen/agvch/identifikatoren-gemeinde.html)'
-)
 IS_PERMANENT_RESIDENT_ATTR = Attribute(
     'is_permanent_resident', 'Is Permanent Resident', np.bool,
     'If swiss citizen or stay permit > 12 months ' +
@@ -75,15 +80,3 @@ COMMUNE_SIZE_ATTR = CategoricalAttribute(
 # BFS Population
 POPULATION_ATTR = Attribute('population', 'Population', np.uint32,
                             'Number of residents at the end of the year (https://www.bfs.admin.ch/asset/de/26857466)')
-
-# Mappers for serialization
-ALL_ATTRIBUTES = (
-    YEAR_ATTR, COMMUNE_ATTR, COMMUNE_SIZE_ATTR, IS_PERMANENT_RESIDENT_ATTR,
-    IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR
-)
-ATTR_TO_CACHE_MAPPER = {
-    attribute: attribute.id for attribute in ALL_ATTRIBUTES
-}
-CACHE_TO_ATTR_MAPPER = {
-    attribute.id: attribute for attribute in ALL_ATTRIBUTES
-}

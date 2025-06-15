@@ -5,10 +5,12 @@ import numpy as np
 import pandas as pd
 from pyaxis import pyaxis
 
-from data.attribute import CACHE_TO_ATTR_MAPPER, ATTR_TO_CACHE_MAPPER, YEAR_ATTR, COMMUNE_ATTR, \
+from data.attribute import CACHE_TO_ATTR_MAPPER, ATTR_TO_CACHE_MAPPER, YEAR_ATTR, \
     IS_PERMANENT_RESIDENT_ATTR, IS_CITIZEN_ATTR, SEX_ATTR, AGE_ATTR, POPULATION_ATTR, \
     COMMUNE_SIZE_ATTR
 from data.cache import POPULATION_CACHE
+from data.location import COMMUNE_ATTR, CANTON_ATTR, load_cantons_metadata, \
+    load_communes_metadata_year
 
 
 def _load_raw_bfs_population_cga():
@@ -68,4 +70,9 @@ def get_bfs_population_cga() -> pd.DataFrame:
         df.rename(ATTR_TO_CACHE_MAPPER, axis=1).to_feather(cache_file)
     df[COMMUNE_SIZE_ATTR] = df.groupby([YEAR_ATTR, COMMUNE_ATTR])[POPULATION_ATTR] \
         .transform(lambda x: _population_to_commune_size(x.sum()))
+    df[CANTON_ATTR] = CANTON_ATTR.convert(
+        # Groups using communes from 2023 no matter the statistic year
+        df[COMMUNE_ATTR].map(load_communes_metadata_year(2023).set_index(COMMUNE_ATTR).cantonAbbreviation)
+        .map(load_cantons_metadata().set_index('cantonAbbreviation')[CANTON_ATTR])
+    )
     return df
