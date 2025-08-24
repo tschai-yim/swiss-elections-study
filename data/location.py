@@ -9,11 +9,11 @@ from data.attribute import Attribute
 # Administrative region codes defined by https://www.agvchapp.bfs.admin.ch/
 # as specified by https://www.ech.ch/de/ech/ech-0071/1.2.0
 CANTON_ATTR = Attribute(
-    'canton', 'Canton', np.uint8,
+    'canton', 'Canton', 'Int64',
     'BFS canton code'
 )
 COMMUNE_ATTR = Attribute(
-    'commune', 'Commune', np.uint16,
+    'commune', 'Commune', 'Int64',
     'BFS commune code'
 )
 

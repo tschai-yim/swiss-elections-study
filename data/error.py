@@ -4,8 +4,21 @@ from scipy import stats
 import statsmodels.api as sm
 
 
-def kish_effective_sample_size(weights: pd.Series) -> float:
-    """ Kish's effective sample size for weighted samples. """
+def kish_effective_sample_size(weights: pd.Series, clusters: pd.Series = None) -> float:
+    """
+    Calculates Kish's effective sample size (ESS).
+
+    If clusters are provided, this assumes perfect intra-cluster correlation (unmodified duplications).
+
+    Args:
+        weights: A pandas Series of weights for each observation.
+        clusters: An optional pandas Series with cluster IDs for each observation.
+
+    Returns:
+        The effective sample size.
+    """
+    if clusters is not None:
+        weights = weights.groupby(clusters).sum()
     weights_square = weights.pow(2).sum()
     return np.nan if weights_square == 0 else (weights.sum() ** 2) / weights_square
 
@@ -42,6 +55,8 @@ def finite_population_correction(
     """Apply Finite Population Correction (FPC) to a pre-calculated infinite margin of error."""
     if sample_size > population_size:
         raise ValueError(f'Sample size {sample_size} cannot be greater than population size {population_size}.')
+    if sample_size == population_size:
+        return 0.0
     fpc_factor = np.sqrt((population_size - sample_size) / (population_size - 1))
     return infinite_moe * fpc_factor if not pd.isna(fpc_factor) else infinite_moe
 
@@ -75,40 +90,48 @@ def finite_classical_error_margin(
     )
 
 
-def _robust_standard_error(metric: pd.Series, weights: pd.Series) -> float:
-    """ Calculate robust standard error for a 0/1 metric using WLS."""
+def _robust_standard_error(
+        metric: pd.Series, weights: pd.Series, clusters: pd.Series = None
+) -> float:
+    """ Calculate robust or cluster-robust standard error for a 0/1 metric using WLS."""
     if weights.sum() == 0:
         return np.nan
     if len(metric) != len(weights):
         raise ValueError(f"Length mismatch: metric {len(metric)} and weights {len(weights)}")
+    if clusters is not None and len(clusters) != len(metric):
+        raise ValueError(f"Length mismatch: metric {len(metric)} and clusters {len(clusters)}")
 
-    # Ensure inputs to WLS are float and handle potential NaNs by dropping them
-    # This is important if metric_01 or weights could have NaNs not aligned
-    model_df = pd.DataFrame({
-        'metric': metric.astype(float),
-        'weights': weights.astype(float)
-    }).dropna()
+    # Drop any NaNs by removing the entry from all series.
+    model_data = {'metric': metric.astype(float), 'weights': weights.astype(float)}
+    if clusters is not None:
+        model_data['clusters'] = clusters
+    model_df = pd.DataFrame(model_data).dropna()
     if model_df['weights'].sum() == 0:
         return np.nan
 
     x = pd.DataFrame({'intercept': np.ones(len(model_df))}, index=model_df.index)
     wls = sm.WLS(model_df['metric'], x, weights=model_df['weights'])
     res = wls.fit()
-    if res.df_resid <= 0:  # noqa
+    if res.df_resid <= 0:
         return np.nan
-    robust_res = res.get_robustcov_results(cov_type='HC1')
+    robust_res = (
+        res.get_robustcov_results(cov_type='HC1')
+        if clusters is None else
+        res.get_robustcov_results(cov_type='cluster', groups=model_df['clusters'])
+    )
     return robust_res.bse[0] if isinstance(robust_res.bse, (np.ndarray, list)) else \
         robust_res.bse.get('intercept', np.nan)
 
 
 def infinite_weighted_error_margin(
         metric: pd.Series, weights: pd.Series,
+        clusters: pd.Series = None,
         confidence=0.95,
 ) -> float:
-    """ Calculate the margin of error for a weighted sample. """
+    """ Calculate the margin of error for a weighted sample, with optional clustering. """
     if not 0 < confidence < 1:
         raise ValueError("Invalid confidence.")
-    standard_error = _robust_standard_error(metric, weights)
+    standard_error = _robust_standard_error(metric, weights, clusters)
     zscore = stats.norm.ppf((1 + confidence) / 2)
     return zscore * standard_error
 
@@ -116,13 +139,20 @@ def infinite_weighted_error_margin(
 def finite_weighted_error_margin(
         metric: pd.Series, weights: pd.Series,
         population_size: float,
+        clusters: pd.Series = None,
         confidence=0.95,
 ) -> float:
-    """ Calculate the margin of error for a weighted sample of a finite population. """
+    """
+    Calculate the margin of error for a weighted sample of a finite population,
+    with optional clustering.
+
+    If clusters are provided, this assumes perfect intra-cluster correlation (unmodified duplications)
+    for the effective sample size. Will underestimate the sample size if this assumption is broken.
+    """
     if population_size <= 0:
         raise ValueError("Population size must be positive.")
-    infinite_moe = infinite_weighted_error_margin(metric, weights, confidence)
-    sample_size = kish_effective_sample_size(weights)
+    infinite_moe = infinite_weighted_error_margin(metric, weights, clusters, confidence)
+    sample_size = kish_effective_sample_size(weights, clusters)
     return finite_population_correction(infinite_moe, sample_size, population_size)
 
 
