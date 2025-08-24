@@ -16,14 +16,22 @@ def merge_proportional(distribution: pd.Series, *distributions: tuple[pd.Series,
     return pd.concat([d / d.sum() for d in named_distributions if d.sum() > 0], axis=1)
 
 
-def total_variance_distance(distribution: pd.DataFrame, reference: str) -> pd.Series:
+def total_variance_distance(distribution1: pd.Series, distribution2: pd.Series) -> float:
+    """
+    Calculate Total Variation Distance between two distributions.
+    """
+    if distribution1.sum() == 0 or distribution2.sum() == 0:
+        return np.nan
+    return 0.5 * (distribution1 / distribution1.sum() - distribution2 / distribution2.sum()).abs().sum()
+
+
+def column_total_variance_distance(distribution: pd.DataFrame, reference: str) -> pd.Series:
     """
     Calculate Total Variation Distance between each column and a reference column.
     """
     if reference not in distribution.columns or distribution[reference].sum() == 0:
         return pd.Series({col: np.nan for col in distribution.columns if col != reference})
-
     return pd.Series({
-        column: (0.5 * (distribution[column] - distribution[reference]).abs().sum())
-        for column in distribution.columns if column != reference and distribution[column].sum() > 0
+        column: total_variance_distance(distribution[column], distribution[reference])
+        for column in distribution.columns if column != reference
     })

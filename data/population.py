@@ -76,3 +76,11 @@ def get_bfs_population_cga() -> pd.DataFrame:
         .map(load_cantons_metadata().set_index('cantonAbbreviation')[CANTON_ATTR])
     )
     return df
+
+
+def can_vote_mask(df: pd.DataFrame) -> pd.Series:
+    return df[IS_CITIZEN_ATTR] & (df[AGE_ATTR] >= 18)
+
+
+def get_electorate(df: pd.DataFrame) -> pd.DataFrame:
+    return df[can_vote_mask(df)]

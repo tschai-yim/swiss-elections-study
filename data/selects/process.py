@@ -111,7 +111,6 @@ def post_process_selects(
     Returns:
         DataFrame with processed demographic weights
     """
-    # TODO: account for clustering in error calculation
     selects_df = spread_age(selects_df, age_std=age_std)
     selects_df = correct_selects_year_weights(
         selects_df=selects_df,
